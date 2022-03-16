@@ -1,5 +1,6 @@
 
-import { _decorator, Component, Node, Label, Sprite, tween, v3 } from 'cc';
+import { _decorator, Component, Node, Label, Sprite, tween, v3, Color } from 'cc';
+import { CardData } from '../../Data/CardData';
 const { ccclass, property } = _decorator;
  
 @ccclass('CardView')
@@ -18,6 +19,27 @@ export class CardView extends Component {
 
     start () {
         
+    }
+
+    public UpdateData(cardData: CardData) : void{
+        switch(cardData.rank){
+            case 1:
+                this.rankTxt.string = "A";
+                break;
+            case 11:
+                this.rankTxt.string = "J";
+                break;
+            case 12:
+                this.rankTxt.string = "Q";
+                break;
+            case 13:
+                this.rankTxt.string = "K";
+                break;
+            default:
+                this.rankTxt.string = cardData.rank.toString();
+                break;
+        }
+        this.rankTxt.color = cardData.isRed? Color.RED : Color.BLACK;
     }
 
     public flip() : void{
