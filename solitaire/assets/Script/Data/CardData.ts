@@ -1,5 +1,5 @@
 
-export const enum Suit{
+export enum Suit{
     Heart = 0,
     Spade = 1, 
     Diamond = 2,
@@ -13,7 +13,7 @@ export class CardData {
     constructor(rank: number, suit: Suit){
         this.suit = suit;
         this.rank = rank;
-        this.isRed = this.suit == Suit.Heart ||  this.suit == Suit.Diamond;
+        this.isRed = this.suit === Suit.Heart ||  this.suit === Suit.Diamond;
     }
 }
 

@@ -1,10 +1,33 @@
 
-import { _decorator, Component, Node, Label, Sprite, tween, v3, Color } from 'cc';
-import { CardData } from '../../Data/CardData';
+import { _decorator, Component, Node, Label, Sprite, tween, v3, Color, Texture2D, SpriteFrame } from 'cc';
+import { CardData, Suit } from '../../Data/CardData';
 const { ccclass, property } = _decorator;
  
 @ccclass('CardView')
 export class CardView extends Component {
+
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private heartSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private diamondSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private clubSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private spadeSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private blackJSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private redJSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private blackQSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private redQSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private blackKSpr : SpriteFrame = null;
+    @property({ group: { name: 'SpriteFrame' }, type: SpriteFrame }) 
+    private redKSpr : SpriteFrame = null;
+
+
     @property(Label)
     private rankTxt: Label = null;
 
@@ -23,22 +46,59 @@ export class CardView extends Component {
 
     public UpdateData(cardData: CardData) : void{
         switch(cardData.rank){
-            case 1:
-                this.rankTxt.string = "A";
-                break;
             case 11:
-                this.rankTxt.string = "J";
+                {
+                    this.rankTxt.string = "J";
+                    this.bigSuit.spriteFrame = cardData.isRed ? this.redJSpr : this.blackJSpr;
+                }
                 break;
             case 12:
-                this.rankTxt.string = "Q";
+                {
+                    this.rankTxt.string = "Q";
+                    this.bigSuit.spriteFrame = cardData.isRed ? this.redQSpr : this.blackQSpr;
+                }
                 break;
             case 13:
-                this.rankTxt.string = "K";
+                {
+                    this.rankTxt.string = "K";
+                    this.bigSuit.spriteFrame = cardData.isRed ? this.redKSpr : this.blackKSpr;
+                }
                 break;
             default:
-                this.rankTxt.string = cardData.rank.toString();
+                {
+                    this.rankTxt.string = cardData.rank == 1 ? "A" : cardData.rank.toString();
+                    switch(cardData.suit){
+                        case Suit.Heart:
+                            this.bigSuit.spriteFrame = this.heartSpr;
+                            break;
+                        case Suit.Club:
+                            this.bigSuit.spriteFrame = this.clubSpr;
+                            break;
+                        case Suit.Diamond:
+                            this.bigSuit.spriteFrame = this.diamondSpr;
+                            break;
+                        case Suit.Spade:
+                            this.bigSuit.spriteFrame = this.spadeSpr;
+                            break;
+                        }
+                }
                 break;
-        }
+            }
+
+        switch(cardData.suit){
+            case Suit.Heart:
+                this.smallSuit.spriteFrame = this.heartSpr;
+                break;
+            case Suit.Club:
+                this.smallSuit.spriteFrame = this.clubSpr;
+                break;
+            case Suit.Diamond:
+                this.smallSuit.spriteFrame = this.diamondSpr;
+                break;
+            case Suit.Spade:
+                this.smallSuit.spriteFrame = this.spadeSpr;
+                break;
+            }
         this.rankTxt.color = cardData.isRed? Color.RED : Color.BLACK;
     }
 
