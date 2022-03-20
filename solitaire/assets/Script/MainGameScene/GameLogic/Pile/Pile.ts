@@ -6,6 +6,10 @@ export class Pile {
     protected cards : CardData[] = null;
     protected index : number = 0;
 
+    public get Cards(){
+        return this.cards;
+    }
+
     public get Index(){
         return this.index;
     }

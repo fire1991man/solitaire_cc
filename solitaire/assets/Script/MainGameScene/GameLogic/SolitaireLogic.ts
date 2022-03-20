@@ -6,11 +6,14 @@ import { StockPile } from "./CardHolder/StockPile";
 import { WastePile } from "./CardHolder/WastePile";
 import { FoundationPile } from "./CardHolder/FoundationPile";
 import { TableauPile } from "./CardHolder/TableauPile";
+import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleCommand } from "../GameCommand/GameCommand";
 
  export class SolitaireLogic {
 
-    readonly FOUNDTION_PILE : number = 4;
-    readonly TABLUE_PILE : number = 7;
+    private readonly FOUNDTION_PILE : number = 4;
+    private readonly TABLUE_PILE : number = 7;
+
+    public processCommand : (gameCommandDatas : GameCommandData[]) => void = null;
 
     private cards : CardData[] = null;
     private shuffleAlgorithm : IShuffle = null;
@@ -77,5 +80,13 @@ import { TableauPile } from "./CardHolder/TableauPile";
 
         var remainCards = this.cards.splice(0,this.cards.length);
         this.stockPile.addCards(remainCards);
+        //
+        let gameCommandDatas : GameCommandData[] = [];
+        gameCommandDatas.push(new ShuffleCommand());
+        gameCommandDatas.push(new DealCardsCommand(this.tableauPiles,this.stockPile.Cards.length));
+        gameCommandDatas.push(new OpenLastCardPileCommand());
+
+        if(this.processCommand != null)
+            this.processCommand(gameCommandDatas);
     }
  }
