@@ -1,17 +1,50 @@
 import { CardData, Suit } from "../../Data/CardData";
 import { log } from 'cc';
 import { IShuffle } from "./Shuffle/IShuffle";
+import { Pile } from "./CardHolder/Pile";
+import { StockPile } from "./CardHolder/StockPile";
+import { WastePile } from "./CardHolder/WastePile";
+import { FoundationPile } from "./CardHolder/FoundationPile";
+import { TableauPile } from "./CardHolder/TableauPile";
 
  export class SolitaireLogic {
 
-    private cards : CardData[] = null;
-    private shuffleFunc : IShuffle = null;
+    readonly FOUNDTION_PILE : number = 4;
+    readonly TABLUE_PILE : number = 7;
 
-    constructor(shuffleFunc : IShuffle){
+    private cards : CardData[] = null;
+    private shuffleAlgorithm : IShuffle = null;
+
+    private stockPile : Pile = null;
+    private watsePile : Pile = null;
+    private foundationPiles : Pile[] = null;
+    private tableauPiles : Pile[] = null;
+    private checkMovePiles : Pile[] = null;
+
+    constructor(shuffle : IShuffle){
         this.cards = new Array<CardData>();
         this.initCard(this.cards);
-        this.shuffleFunc = shuffleFunc;
-        this.shuffleFunc.Shuffle(this.cards);
+        this.initPiles();
+        this.shuffleAlgorithm = shuffle;
+    }
+
+    private initPiles() : void{
+        this.checkMovePiles = [];
+        this.stockPile = new StockPile();
+        this.watsePile = new WastePile();
+        //
+        this.foundationPiles = [];
+        for(let i = 0; i < this.FOUNDTION_PILE;i++){
+            this.foundationPiles.push(new FoundationPile(i));
+        }
+        //
+        this.tableauPiles = [];
+        for(let i = 0; i < this.TABLUE_PILE;i++){
+            this.tableauPiles.push(new TableauPile(i));
+        }
+        //
+        Array.prototype.push.apply(this.checkMovePiles, this.foundationPiles);
+        Array.prototype.push.apply(this.checkMovePiles, this.tableauPiles);
     }
 
     private initCard(cards : CardData[]) : void{
@@ -31,5 +64,18 @@ import { IShuffle } from "./Shuffle/IShuffle";
                 cards.push(new CardData(i,enumValue));
             }
         }
+    }
+
+    public StartGame() : void{
+        this.shuffleAlgorithm.Shuffle(this.cards);
+        for(let i = 0; i < this.TABLUE_PILE;i++){
+            for(let j = 0; j < this.tableauPiles[i].Index+1;j++){
+                var cardPop = this.cards.pop();
+                this.tableauPiles[i].addCard(cardPop);
+            }
+        }
+
+        var remainCards = this.cards.splice(0,this.cards.length);
+        this.stockPile.addCards(remainCards);
     }
  }

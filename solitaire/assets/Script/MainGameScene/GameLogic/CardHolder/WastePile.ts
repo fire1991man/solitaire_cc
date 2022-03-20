@@ -1,8 +1,15 @@
 
 import { _decorator, Component, Node } from 'cc';
-import { IPile } from './IPile';
+import { CardData } from '../../../Data/CardData';
+import { Pile } from './Pile';
 
-export class WastePile implements IPile {
-    
+export class WastePile extends Pile {
+    constructor(){
+        super();
+    }
+
+    public allowAddCards(cardAddeds: CardData[]): boolean {
+        return cardAddeds.length == 1;
+    }
 }
 

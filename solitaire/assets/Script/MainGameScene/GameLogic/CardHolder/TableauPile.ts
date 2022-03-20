@@ -1,7 +1,10 @@
 
 import { _decorator, Component, Node } from 'cc';
-import { IPile } from './IPile';
+import { Pile } from './Pile';
 
-export class TableauPile implements IPile {
-    
+export class TableauPile extends Pile {
+    constructor(index : number){
+        super();
+        this.index = index;
+    }
 }

@@ -19,16 +19,6 @@ export class MainGameController extends Component {
     }
 
     public Click(): void{
-        this.card.flip();
-    }
-
-    async delayExample(cardDatas : Array<CardData>) {
-        for( let i = 0; i < cardDatas.length;i++){
-            let cardData = cardDatas[i];
-            this.card.UpdateData(new CardData(cardData.rank,cardData.suit));
-            await Utils.sleep(1000);
-        }
-      }
-
-    
+        this.solitaireLogic.StartGame();
+    }    
 }
