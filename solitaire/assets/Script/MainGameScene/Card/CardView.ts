@@ -44,7 +44,8 @@ export class CardView extends Component {
         
     }
 
-    public UpdateData(cardData: CardData) : void{
+    public UpdateData(cardData: CardData, isOpen : boolean) : void{
+        this.cardBack.active = !isOpen;
         switch(cardData.rank){
             case 11:
                 {

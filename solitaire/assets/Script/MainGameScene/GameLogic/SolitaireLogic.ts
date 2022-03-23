@@ -1,12 +1,12 @@
 import { CardData, Suit } from "../../Data/CardData";
 import { log } from 'cc';
 import { IShuffle } from "./Shuffle/IShuffle";
-import { Pile } from "./CardHolder/Pile";
-import { StockPile } from "./CardHolder/StockPile";
-import { WastePile } from "./CardHolder/WastePile";
-import { FoundationPile } from "./CardHolder/FoundationPile";
-import { TableauPile } from "./CardHolder/TableauPile";
 import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleCommand } from "../GameCommand/GameCommand";
+import { Pile } from "./Pile/Pile";
+import { StockPile } from "./Pile/StockPile";
+import { WastePile } from "./Pile/WastePile";
+import { FoundationPile } from "./Pile/FoundationPile";
+import { TableauPile } from "./Pile/TableauPile";
 
  export class SolitaireLogic {
 
@@ -70,11 +70,23 @@ import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleComm
     }
 
     public StartGame() : void{
+        //shuffle
         this.shuffleAlgorithm.Shuffle(this.cards);
+        // close all card
+        this.cards.forEach((card)=>{
+            card.isOpen = false;
+        });
+
+        let lastCardPerPiles : CardData[] = [];
         for(let i = 0; i < this.TABLUE_PILE;i++){
             for(let j = 0; j < this.tableauPiles[i].Index+1;j++){
                 var cardPop = this.cards.pop();
                 this.tableauPiles[i].addCard(cardPop);
+                if(j == this.tableauPiles[i].Index){
+                    cardPop.isOpen = true ;
+                    lastCardPerPiles.push(cardPop);
+                }
+                
             }
         }
 
@@ -84,7 +96,7 @@ import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleComm
         let gameCommandDatas : GameCommandData[] = [];
         gameCommandDatas.push(new ShuffleCommand());
         gameCommandDatas.push(new DealCardsCommand(this.tableauPiles,this.stockPile.Cards.length));
-        gameCommandDatas.push(new OpenLastCardPileCommand());
+        gameCommandDatas.push(new OpenLastCardPileCommand(lastCardPerPiles));
 
         if(this.processCommand != null)
             this.processCommand(gameCommandDatas);

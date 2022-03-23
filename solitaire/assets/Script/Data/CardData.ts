@@ -10,6 +10,8 @@ export class CardData {
     public suit : Suit = Suit.Heart;
     public rank : number = 0;
     public isRed : boolean;
+    public isOpen : boolean;
+
     constructor(rank: number, suit: Suit){
         this.suit = suit;
         this.rank = rank;
