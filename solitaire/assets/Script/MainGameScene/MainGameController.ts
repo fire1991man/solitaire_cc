@@ -12,7 +12,7 @@ const { ccclass, property } = _decorator;
 export class MainGameController extends Component {
     
     @property(CardView)
-    card : CardView = null;
+    private cardPrefab : CardView = null;
 
     private solitaireLogic : SolitaireLogic = null;
     start () {
