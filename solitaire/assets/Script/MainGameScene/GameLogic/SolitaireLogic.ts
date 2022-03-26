@@ -86,7 +86,6 @@ import { TableauPile } from "./Pile/TableauPile";
                     cardPop.isOpen = true ;
                     lastCardPerPiles.push(cardPop);
                 }
-                
             }
         }
 
@@ -101,4 +100,21 @@ import { TableauPile } from "./Pile/TableauPile";
         if(this.processCommand != null)
             this.processCommand(gameCommandDatas);
     }
+
+    public CheckCardFromTableau(tableauIndex: number, cardIndex : number) : void{
+        log("CheckCardFromTableau - tableauIndex: " + tableauIndex + " - cardIndex: " + cardIndex);
+    }
+
+    public CheckCardFromFoundation(foundationIndex: number,cardIndex : number) : void{
+        log("CheckCardFromFoundation - foundationIndex: " + foundationIndex + " - cardIndex: " + cardIndex);
+    }
+
+    public CheckCardFromWaste(cardIndex : number) : void{
+        log("CheckCardFromWaste - cardIndex: " + cardIndex);
+    }
+
+    public CheckCardFromStock(cardIndex : number) : void{
+        log("CheckCardFromStock - cardIndex: " + cardIndex);
+    }
+
  }

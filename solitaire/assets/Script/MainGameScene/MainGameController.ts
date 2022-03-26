@@ -8,6 +8,7 @@ import { StockPile } from './GameLogic/Pile/StockPile';
 import { SimpleShuffle } from './GameLogic/Shuffle/SimpleShuffle';
 import { SolitaireLogic } from './GameLogic/SolitaireLogic';
 import { FoundationPileView } from './PileView/FoundationPileView';
+import { PileView } from './PileView/PileView';
 import { StockPileView } from './PileView/StockPileView';
 import { TableauPileView } from './PileView/TableauPileView';
 import { WastePileView } from './PileView/WastePileView';
@@ -41,6 +42,25 @@ export class MainGameController extends Component {
         this.solitaireLogic = new SolitaireLogic(new SimpleShuffle());
         this.solitaireLogic.processCommand = this.processCommand.bind(this);
         this.createAllCards();
+        this.initPile();
+    }
+
+    private initPile() : void{
+        this.stockView.touchEndCallback = this.onStockTouchEnd.bind(this);
+        //
+        this.wasteView.touchEndCallback = this.onCheckPileTouchEnd.bind(this);
+        //
+        for(let i = 0; i < this.foundationViews.length;i++){
+            let foundationView = this.foundationViews[i];
+            foundationView.touchEndCallback = this.onCheckPileTouchEnd.bind(this);
+            foundationView.init(i);
+        }
+        //
+        for(let i = 0; i < this.tableauPileViews.length;i++){
+            let tableauView = this.tableauPileViews[i];
+            tableauView.touchEndCallback = this.onCheckPileTouchEnd.bind(this);
+            tableauView.init(i);
+        }
     }
 
     public Click(): void{
@@ -116,6 +136,22 @@ export class MainGameController extends Component {
                 continue;
             lastCardView.UpdateData(cardData,cardData.isOpen);
             lastCardView.flip();
+        }
+    }
+
+    private onStockTouchEnd(pile: PileView, cardIndex : number) : void{
+        this.solitaireLogic.CheckCardFromStock(cardIndex);
+    }
+
+    private onCheckPileTouchEnd(pile: PileView,cardIndex : number) : void{
+        if(pile instanceof TableauPileView){
+            this.solitaireLogic.CheckCardFromTableau(pile.Index, cardIndex);
+        }
+        else if(pile instanceof FoundationPileView){
+            this.solitaireLogic.CheckCardFromFoundation(pile.Index, cardIndex);
+        }
+        else if(pile instanceof WastePileView){
+            this.solitaireLogic.CheckCardFromWaste(cardIndex);
         }
     }
 }

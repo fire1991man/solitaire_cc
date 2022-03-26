@@ -1,5 +1,5 @@
 
-import { _decorator, Component, Node, UITransform, Vec2, math, Vec3 } from 'cc';
+import { _decorator, Component, Node, UITransform, Vec2, math, Vec3, EventTouch } from 'cc';
 import { PileView } from './PileView';
 const { ccclass, property } = _decorator;
  
@@ -15,7 +15,28 @@ export class TableauPileView extends PileView {
     }
 
     public getCardPosByIndex(index: number) : Vec3{
-        return new Vec3(0,this.height/2 - this.CARD_SIZE.y - (index -1)*this.CARD_SPACE_Y);
+        return new Vec3(0,this.height/2 - this.CARD_SIZE.y/2 - index*this.CARD_SPACE_Y);
     }
    
+    protected onTouchEnd(touch: EventTouch) : void{
+        
+        let touchLocUI = touch.getUILocation();
+        const uiSpaceWorldPos = new Vec3(touchLocUI.x, touchLocUI.y, 0);
+        const nodeAUITrans = this.node.getComponent(UITransform)!;
+        let localPos : Vec3 = new Vec3();
+        nodeAUITrans.convertToNodeSpaceAR(uiSpaceWorldPos, localPos);
+        //
+        let cardIndex = 0;
+        if( localPos.y <= (-this.height/2 + this.CARD_SIZE.y))
+            cardIndex = this.cards.length -1;
+        else{
+            cardIndex = ( this.height/2 - localPos.y)/this.CARD_SPACE_Y;
+            cardIndex = Math.floor(cardIndex);
+        }
+    
+        if(this.touchEndCallback != null){
+            cardIndex = this.cards.length > 0 ? cardIndex : -1;
+            this.touchEndCallback(this,cardIndex);
+        }
+    }
 }
