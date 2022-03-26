@@ -12,8 +12,6 @@ export abstract class PileView extends Component {
         return this.index;
     }
     
-    
-
     public touchEndCallback : (pile : PileView ,index : number) => void = null;
     protected readonly CARD_SIZE : Vec2 = new Vec2(95,151);
 
@@ -39,12 +37,26 @@ export abstract class PileView extends Component {
         }
     }
 
+    public addCard(card : CardView) : void{
+        this.updateSize(this.cards.length + 1); 
+        card.node.setParent(this.node);
+        card.node.setPosition(this.getCardPosByIndex(0));
+        this.cards.push(card);
+    }
+
     protected updateSize(numberCards : number) : void {
         this.height = this.getComponent(UITransform).contentSize.y;
     }
 
-    public getCardPosByIndex(index : number) : Vec3{
+    protected getCardPosByIndex(index : number) : Vec3{
         return new Vec3(0,0);
+    }
+
+    public getCardWorldPosByIndex(index : number) : Vec3{
+        const nodeAUITrans = this.node.getComponent(UITransform)!;
+        let worldPos = new Vec3();
+        nodeAUITrans.convertToWorldSpaceAR(this.getCardPosByIndex(index),worldPos);
+        return worldPos;
     }
 
     public getCardByIndex(index : number) : CardView{
@@ -55,6 +67,12 @@ export abstract class PileView extends Component {
 
     public getLastCard() : CardView{
         return this.getCardByIndex(this.cards.length-1);
+    }
+
+    public removeLastCard() : CardView{
+        if(this.cards.length == 0)
+            return null;
+        return this.cards.pop();
     }
 
     protected onTouchEnd(touch: EventTouch) : void{

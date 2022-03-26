@@ -1,7 +1,7 @@
 import { CardData, Suit } from "../../Data/CardData";
 import { log } from 'cc';
 import { IShuffle } from "./Shuffle/IShuffle";
-import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleCommand } from "../GameCommand/GameCommand";
+import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, RefillStockCommand, ShuffleCommand, StockToWasteCommand } from "../GameCommand/GameCommand";
 import { Pile } from "./Pile/Pile";
 import { StockPile } from "./Pile/StockPile";
 import { WastePile } from "./Pile/WastePile";
@@ -115,6 +115,26 @@ import { TableauPile } from "./Pile/TableauPile";
 
     public CheckCardFromStock(cardIndex : number) : void{
         log("CheckCardFromStock - cardIndex: " + cardIndex);
+        let gameCommandDatas : GameCommandData[] = [];
+        // refill
+        if(cardIndex == -1){
+            while(this.watsePile.Cards.length > 0){
+                var cardData = this.watsePile.Cards.pop();
+                cardData.isOpen = false;
+                this.stockPile.Cards.push(cardData);
+            }
+            gameCommandDatas.push(new RefillStockCommand(this.stockPile.Cards.length));
+        }
+        else{
+            let lastCardStock = this.stockPile.Cards.pop();
+            lastCardStock.isOpen = true;
+            this.watsePile.Cards.push(lastCardStock);
+            
+            gameCommandDatas.push(new StockToWasteCommand(lastCardStock));
+            
+        }
+        if(this.processCommand != null)
+                this.processCommand(gameCommandDatas);
     }
 
  }

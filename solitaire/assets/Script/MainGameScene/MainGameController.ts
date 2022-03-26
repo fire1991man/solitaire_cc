@@ -3,7 +3,7 @@ import { _decorator, Component, Node, log, Prefab, instantiate } from 'cc';
 import { CardData, Suit } from '../Data/CardData';
 import { Utils } from '../Utils/Utils';
 import { CardView } from './Card/CardView';
-import { Command, DealCardsCommand, GameCommandData, OpenLastCardPileCommand, ShuffleCommand } from './GameCommand/GameCommand';
+import { Command, DealCardsCommand, GameCommandData, OpenLastCardPileCommand, RefillStockCommand, ShuffleCommand, StockToWasteCommand } from './GameCommand/GameCommand';
 import { StockPile } from './GameLogic/Pile/StockPile';
 import { SimpleShuffle } from './GameLogic/Shuffle/SimpleShuffle';
 import { SolitaireLogic } from './GameLogic/SolitaireLogic';
@@ -43,6 +43,7 @@ export class MainGameController extends Component {
         this.solitaireLogic.processCommand = this.processCommand.bind(this);
         this.createAllCards();
         this.initPile();
+        this.solitaireLogic.StartGame();
     }
 
     private initPile() : void{
@@ -86,6 +87,16 @@ export class MainGameController extends Component {
                         await this.processOpenLastCardPile(<OpenLastCardPileCommand> gameCommandData);
                     }
                     break;
+                case Command.STOCK_TO_WATSE:
+                    {
+                        await this.processStockToWaste(<StockToWasteCommand> gameCommandData);
+                    }
+                    break;
+                case Command.REFILL_STOCK:
+                {
+                    await this.processRefillStock(<RefillStockCommand> gameCommandData);
+                }
+                    break;
             }
         }
     }
@@ -103,7 +114,7 @@ export class MainGameController extends Component {
 
     private async processShuffle(shuffleCommand : ShuffleCommand){
         log("processShuffle");
-        await Utils.sleep(1000);
+        await Utils.sleep(500);
     }
 
     private async processDealCards(dealCardsCommand : DealCardsCommand){
@@ -123,7 +134,7 @@ export class MainGameController extends Component {
 
         let remainCardViews = this.cardViews.slice(index,this.cardViews.length);
         this.stockView.addCards(remainCardViews);
-        await Utils.sleep(1000);
+        await Utils.sleep(500);
     }
 
     private async processOpenLastCardPile( openLastCardPileCommand : OpenLastCardPileCommand){
@@ -135,8 +146,42 @@ export class MainGameController extends Component {
             if(lastCardView == null)
                 continue;
             lastCardView.UpdateData(cardData,cardData.isOpen);
-            lastCardView.flip();
+            lastCardView.flipOpen();
         }
+    }
+
+    private async processStockToWaste( stockToWasteCommand : StockToWasteCommand){
+        let cardView = this.stockView.removeLastCard();
+        if(cardView == null)
+            return;
+        let cardData = stockToWasteCommand.CardData;
+        this.changeCardToTopLayer(cardView);
+        cardView.UpdateData(cardData,false);
+        cardView.flipOpen(()=>{
+            let destinationWorldPos = this.wasteView.getCardWorldPosByIndex(0);
+            cardView.move(destinationWorldPos,()=>{
+                this.wasteView.addCard(cardView);
+            });
+        });
+    }
+
+    private async processRefillStock( refillStockCommand : RefillStockCommand){
+        let numberCard = refillStockCommand.NumberCard;
+        let destinationWorldPos = this.stockView.getCardWorldPosByIndex(0);
+        while(numberCard-- > 0){
+            let tempCardView = this.wasteView.removeLastCard();
+            tempCardView.flipClose(()=>{
+                tempCardView.move(destinationWorldPos,()=>{
+                    this.stockView.addCard(tempCardView);
+                });
+            });
+        }
+    }
+
+    private changeCardToTopLayer(cardView : CardView){
+        let worldPos = cardView.node.worldPosition;
+        cardView.node.setParent(this.topLayer);
+        cardView.node.worldPosition = worldPos;
     }
 
     private onStockTouchEnd(pile: PileView, cardIndex : number) : void{
