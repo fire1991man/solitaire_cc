@@ -1,14 +1,24 @@
 import { CardData, Suit } from "../../Data/CardData";
 import { log } from 'cc';
 import { IShuffle } from "./Shuffle/IShuffle";
-import { DealCardsCommand, GameCommandData, OpenLastCardPileCommand, RefillStockCommand, ShuffleCommand, StockToWasteCommand } from "../GameCommand/GameCommand";
+import { DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand } from "../GameCommand/GameCommand";
 import { Pile } from "./Pile/Pile";
 import { StockPile } from "./Pile/StockPile";
 import { WastePile } from "./Pile/WastePile";
 import { FoundationPile } from "./Pile/FoundationPile";
 import { TableauPile } from "./Pile/TableauPile";
 
- export class SolitaireLogic {
+class ResultCheckMove{
+    constructor(endPileIndex : number, cardDatas : CardData[] ){
+        this.endPileIndex = endPileIndex;
+        this.cardDatas = cardDatas;
+    }
+
+    public endPileIndex : number = 0;
+    public cardDatas : CardData[] = null;
+}
+
+export class SolitaireLogic {
 
     private readonly FOUNDTION_PILE : number = 4;
     private readonly TABLUE_PILE : number = 7;
@@ -95,22 +105,177 @@ import { TableauPile } from "./Pile/TableauPile";
         let gameCommandDatas : GameCommandData[] = [];
         gameCommandDatas.push(new ShuffleCommand());
         gameCommandDatas.push(new DealCardsCommand(this.tableauPiles,this.stockPile.Cards.length));
-        gameCommandDatas.push(new OpenLastCardPileCommand(lastCardPerPiles));
+        gameCommandDatas.push(new OpenLastCardAllTableauCommand(lastCardPerPiles));
 
         if(this.processCommand != null)
             this.processCommand(gameCommandDatas);
     }
 
+    private checkCardInFoundation(cardData : CardData,choosePile :  Pile,
+                                     foundationIndex: number, cardIndex : number) : ResultCheckMove{
+        let isLastCard = cardIndex == choosePile.Cards.length - 1;
+        for(let i = 0 ; i < this.foundationPiles.length;i++){
+            // avoid check in same foudation
+            if(i == foundationIndex)
+                continue;
+                
+            let foundationPile = this.foundationPiles[i];
+            if(isLastCard){
+                if(foundationPile.Cards.length == 0 ){
+                    if(cardData.rank != CardData.RANK_A)
+                        continue;
+                    // add card A to empty foundation
+                    let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                    Array.prototype.push.apply(foundationPile.Cards, cardPops);
+                    return new ResultCheckMove(i,cardPops);
+                }
+                else{
+                    let lastCardInFoundation = foundationPile.getLastCard();
+                    if(lastCardInFoundation.suit != cardData.suit)
+                        continue;
+                    if(cardData.rank - lastCardInFoundation.rank != 1)
+                        continue;
+                    // add card to foundation
+                    let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                    Array.prototype.push.apply(foundationPile.Cards, cardPops);
+                    return new ResultCheckMove(i,cardPops);
+                }
+            }
+        }
+        return null;
+    }
+
+    
+
+    private checkCardInTableau(cardData : CardData, choosePile: Pile,
+                         tableauIndex : number, cardIndex : number) : ResultCheckMove{
+        for(let i = 0 ; i < this.tableauPiles.length;i++){
+            // avoid check in same tableau
+            if(i == tableauIndex)
+                continue;
+
+            let tableauPile = this.tableauPiles[i];
+            if(tableauPile.Cards.length == 0 ){
+                if(cardData.rank != CardData.RANK_K)
+                    continue;
+                // add card K to empty foundation
+                let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                Array.prototype.push.apply(tableauPile.Cards, cardPops);
+                return new ResultCheckMove(i,cardPops);
+            }
+            else{
+                let lastCardInTabeau = tableauPile.getLastCard();
+                if(lastCardInTabeau.isRed == cardData.isRed)
+                    continue;
+                if(lastCardInTabeau.rank - cardData.rank != 1)
+                    continue;
+                // add card to tableau
+                let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                Array.prototype.push.apply(tableauPile.Cards, cardPops);
+                return new ResultCheckMove(i,cardPops);
+            }
+        }
+        return null;
+    }
+
     public CheckCardFromTableau(tableauIndex: number, cardIndex : number) : void{
         log("CheckCardFromTableau - tableauIndex: " + tableauIndex + " - cardIndex: " + cardIndex);
+        let choosePile = this.tableauPiles[tableauIndex];
+        let cardData = choosePile.getCardByIndex(cardIndex);
+        
+        if(cardData == null)
+            return;
+        
+        // card is close
+        let gameCommandDatas : GameCommandData[] = [];
+        if(!cardData.isOpen){
+            gameCommandDatas.push(new ShakeCardTaleauCommand(cardIndex,tableauIndex));
+        }
+        else{
+            let resultCheckMove = this.checkCardInFoundation(cardData,choosePile,-1,cardIndex);
+
+            if( resultCheckMove != null){
+                gameCommandDatas.push(new MoveTableauToFoundationCommand(tableauIndex,
+                                            resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas)); 
+                // open last card start tableau
+                var lastCardInStartTableau = this.tableauPiles[tableauIndex].getLastCard();
+                if(lastCardInStartTableau != null && !lastCardInStartTableau.isOpen){
+                    lastCardInStartTableau.isOpen = true;
+                    gameCommandDatas.push(new OpenLastCardTableauCommand(lastCardInStartTableau,tableauIndex));  
+                }
+                // check win
+                if(this.isWinGame())
+                    gameCommandDatas.push(new GameResultCommand(true));
+            }   
+            else{
+                resultCheckMove = this.checkCardInTableau(cardData,choosePile,tableauIndex,cardIndex);
+                if( resultCheckMove != null){
+                    gameCommandDatas.push(new MoveTableauToTableauCommand(tableauIndex,
+                                            resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
+                    // open last card start tableau
+                    var lastCardInStartTableau = this.tableauPiles[tableauIndex].getLastCard();
+                    if(lastCardInStartTableau != null && !lastCardInStartTableau.isOpen){
+                        lastCardInStartTableau.isOpen = true;
+                        gameCommandDatas.push(new OpenLastCardTableauCommand(lastCardInStartTableau,tableauIndex));
+                    }
+                }
+                else
+                    gameCommandDatas.push(new ShakeCardTaleauCommand(cardIndex,tableauIndex));
+            }
+        }
+
+        if(this.processCommand != null)
+                this.processCommand(gameCommandDatas);
     }
 
     public CheckCardFromFoundation(foundationIndex: number,cardIndex : number) : void{
         log("CheckCardFromFoundation - foundationIndex: " + foundationIndex + " - cardIndex: " + cardIndex);
+        let choosePile = this.foundationPiles[foundationIndex];
+        let cardData = choosePile.getCardByIndex(cardIndex);
+
+        if(cardData == null)
+            return;
+        let gameCommandDatas : GameCommandData[] = [];
+        let resultCheckMove = this.checkCardInTableau(cardData,choosePile,-1,cardIndex);
+        if( resultCheckMove != null)
+            gameCommandDatas.push(new MoveFoundationToTableauCommand(foundationIndex,
+                                    resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
+        else
+            gameCommandDatas.push(new ShakeCardFoundationCommand(cardIndex,foundationIndex));
+
+        if(this.processCommand != null)
+            this.processCommand(gameCommandDatas);
     }
 
     public CheckCardFromWaste(cardIndex : number) : void{
         log("CheckCardFromWaste - cardIndex: " + cardIndex);
+
+        let choosePile = this.watsePile;
+        let cardData = choosePile.getCardByIndex(cardIndex);
+
+        if(cardData == null)
+            return;
+        let gameCommandDatas : GameCommandData[] = [];
+
+        let resultCheckMove = this.checkCardInFoundation(cardData,choosePile,-1,cardIndex);
+
+        if( resultCheckMove != null){
+            gameCommandDatas.push(new MoveWasteToFoundationCommand(
+                                            resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));   
+            if(this.isWinGame())
+                gameCommandDatas.push(new GameResultCommand(true));
+        }   
+        else{
+            resultCheckMove = this.checkCardInTableau(cardData,choosePile,-1,cardIndex);
+            if( resultCheckMove != null)
+                gameCommandDatas.push(new MoveWasteToTableauCommand(
+                                        resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
+            else
+                gameCommandDatas.push(new ShakeCardWasteCommand());
+        }
+
+        if(this.processCommand != null)
+                this.processCommand(gameCommandDatas);
     }
 
     public CheckCardFromStock(cardIndex : number) : void{
@@ -118,6 +283,8 @@ import { TableauPile } from "./Pile/TableauPile";
         let gameCommandDatas : GameCommandData[] = [];
         // refill
         if(cardIndex == -1){
+            if(this.watsePile.Cards.length == 0)
+                return;
             while(this.watsePile.Cards.length > 0){
                 var cardData = this.watsePile.Cards.pop();
                 cardData.isOpen = false;
@@ -131,10 +298,19 @@ import { TableauPile } from "./Pile/TableauPile";
             this.watsePile.Cards.push(lastCardStock);
             
             gameCommandDatas.push(new StockToWasteCommand(lastCardStock));
-            
         }
+
         if(this.processCommand != null)
                 this.processCommand(gameCommandDatas);
+    }
+
+    private isWinGame() : boolean{
+        for(let i = 0; i < this.foundationPiles.length;i++){
+            var foundation = this.foundationPiles[i];
+            if(foundation.Cards.length != 13)
+                return false;
+        }
+        return true;
     }
 
  }

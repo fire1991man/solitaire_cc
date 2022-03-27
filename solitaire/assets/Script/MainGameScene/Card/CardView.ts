@@ -71,7 +71,7 @@ export class CardView extends Component {
             default:
                 {
                     this.bigSuit.node.scale = new Vec3(0.55,0.55);
-                    this.rankTxt.string = cardData.rank == 1 ? "A" : cardData.rank.toString();
+                    this.rankTxt.string = cardData.rank == CardData.RANK_A ? "A" : cardData.rank.toString();
                     switch(cardData.suit){
                         case Suit.Heart:
                             this.bigSuit.spriteFrame = this.heartSpr;
@@ -145,6 +145,15 @@ export class CardView extends Component {
             if(callback != null)
                 callback();
         })
+        .start();
+    }
+
+    public shake() : void{
+        const curPos = this.node.position;
+        tween(this.node)
+        .to(0.035, {position: v3(curPos.x + 10,curPos.y,curPos.z)})
+        .to(0.035, {position: v3(curPos.x - 10,curPos.y,curPos.z)})
+        .to(0.035, {position: v3(curPos.x,curPos.y,curPos.z)})
         .start();
     }
 }

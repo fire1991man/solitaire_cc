@@ -3,9 +3,10 @@ import { _decorator, Component, Node, log, Prefab, instantiate } from 'cc';
 import { CardData, Suit } from '../Data/CardData';
 import { Utils } from '../Utils/Utils';
 import { CardView } from './Card/CardView';
-import { Command, DealCardsCommand, GameCommandData, OpenLastCardPileCommand, RefillStockCommand, ShuffleCommand, StockToWasteCommand } from './GameCommand/GameCommand';
+import { Command, DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand } from './GameCommand/GameCommand';
 import { StockPile } from './GameLogic/Pile/StockPile';
 import { SimpleShuffle } from './GameLogic/Shuffle/SimpleShuffle';
+import { SureWinTemplateShuffle } from './GameLogic/Shuffle/SureWinTemplateShuffle';
 import { SolitaireLogic } from './GameLogic/SolitaireLogic';
 import { FoundationPileView } from './PileView/FoundationPileView';
 import { PileView } from './PileView/PileView';
@@ -17,6 +18,9 @@ const { ccclass, property } = _decorator;
 @ccclass('MainGameController')
 export class MainGameController extends Component {
     
+    @property(Node)
+    private blockTouchLayer : Node = null;
+
     @property(Prefab)
     private cardPrefab : Prefab = null;
 
@@ -39,7 +43,7 @@ export class MainGameController extends Component {
 
     private solitaireLogic : SolitaireLogic = null;
     start () {
-        this.solitaireLogic = new SolitaireLogic(new SimpleShuffle());
+        this.solitaireLogic = new SolitaireLogic(new SureWinTemplateShuffle());
         this.solitaireLogic.processCommand = this.processCommand.bind(this);
         this.createAllCards();
         this.initPile();
@@ -69,6 +73,7 @@ export class MainGameController extends Component {
     }    
 
     private async processCommand(gameCommandDatas : GameCommandData[]){
+        this.blockTouchLayer.active = true;
         for(let i = 0; i < gameCommandDatas.length;i++){
             let gameCommandData  = gameCommandDatas[i];
             switch(gameCommandData.Command){
@@ -82,9 +87,9 @@ export class MainGameController extends Component {
                         await this.processDealCards(<DealCardsCommand> gameCommandData);
                     }
                     break;
-                case Command.OPEN_LAST_CARD_PILE:
+                case Command.OPEN_LAST_CARD_ALL_TABLEAU:
                     {
-                        await this.processOpenLastCardPile(<OpenLastCardPileCommand> gameCommandData);
+                        await this.processOpenLastCardAllTableau(<OpenLastCardAllTableauCommand> gameCommandData);
                     }
                     break;
                 case Command.STOCK_TO_WATSE:
@@ -93,12 +98,63 @@ export class MainGameController extends Component {
                     }
                     break;
                 case Command.REFILL_STOCK:
-                {
-                    await this.processRefillStock(<RefillStockCommand> gameCommandData);
-                }
+                    {
+                        await this.processRefillStock(<RefillStockCommand> gameCommandData);
+                    }
+                    break;
+                case Command.SHAKE_CARD_TABLEAU:
+                    {
+                        await this.processShakeCardTableau(<ShakeCardTaleauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.SHAKE_CARD_FOUNDATION:
+                    {
+                        await this.processShakeCardFoundation(<ShakeCardFoundationCommand> gameCommandData);
+                    }
+                    break;
+                case Command.SHAKE_CARD_WASTE:
+                    {
+                        await this.processShakeCardWaste(<ShakeCardWasteCommand> gameCommandData);
+                    }
+                    break;
+                case Command.MOVE_TABLEAU_TO_TABLEAU:
+                    {
+                        await this.processMoveTableauToTableau(<MoveTableauToTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.MOVE_FOUNDATION_TO_TABLEAU:
+                    {
+                        await this.processMoveFoundationToTableau(<MoveFoundationToTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.MOVE_TABLEAU_TO_FOUNDATION:
+                    {
+                        await this.processMoveTableauToFoundation(<MoveTableauToFoundationCommand> gameCommandData);
+                    }
+                    break;
+                case Command.MOVE_WASTE_TO_FOUNDATION:
+                    {
+                        await this.processMoveWasteToFoundation(<MoveWasteToFoundationCommand> gameCommandData);
+                    }
+                    break;
+                case Command.MOVE_WASTE_TO_TABLEAU:
+                    {
+                        await this.processMoveWasteToTableau(<MoveWasteToTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.OPEN_LAST_CARD_TABLEAU:
+                    {
+                        await this.processOpenLastCardTableau(<OpenLastCardTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.GAME_RESULT:
+                    {
+                        await this.processGameResult(<GameResultCommand> gameCommandData);
+                    }
                     break;
             }
         }
+        this.blockTouchLayer.active = false;
     }
 
     private createAllCards() : void{
@@ -137,9 +193,9 @@ export class MainGameController extends Component {
         await Utils.sleep(500);
     }
 
-    private async processOpenLastCardPile( openLastCardPileCommand : OpenLastCardPileCommand){
-        log("processOpenLastCardPile");
-        let lastCardPerPiles = openLastCardPileCommand.LastCardPerPiles;
+    private async processOpenLastCardAllTableau( openLastCardAllTableauCommand : OpenLastCardAllTableauCommand){
+        log("processOpenLastCardAllTableau");
+        let lastCardPerPiles = openLastCardAllTableauCommand.LastCardPerPiles;
         for(let i = 0; i < lastCardPerPiles.length;i++){
             let cardData = lastCardPerPiles[i];
             let lastCardView = this.tableauPileViews[i].getLastCard();
@@ -163,6 +219,7 @@ export class MainGameController extends Component {
                 this.wasteView.addCard(cardView);
             });
         });
+        await Utils.sleep(350);
     }
 
     private async processRefillStock( refillStockCommand : RefillStockCommand){
@@ -176,6 +233,123 @@ export class MainGameController extends Component {
                 });
             });
         }
+        await Utils.sleep(350);
+    }
+
+    private async processShakeCardTableau( shakeCardTableauCommand : ShakeCardTaleauCommand){
+        let tableauIndex = shakeCardTableauCommand.TableauIndex;
+        let cardIndex = shakeCardTableauCommand.CardIndex;
+        var cardView = this.tableauPileViews[tableauIndex].getCardByIndex(cardIndex);
+        if(cardView == null)
+            return;
+        cardView.shake();
+        await Utils.sleep(100);
+    }
+
+    private async processShakeCardFoundation( shakeCardFoundationCommand : ShakeCardFoundationCommand){
+        let tableauIndex = shakeCardFoundationCommand.FoundationIndex;
+        let cardIndex = shakeCardFoundationCommand.CardIndex;
+        var cardView = this.foundationViews[tableauIndex].getCardByIndex(cardIndex);
+        if(cardView == null)
+            return;
+        cardView.shake();
+        await Utils.sleep(100);
+    }
+
+    private async processShakeCardWaste( shakeCardWasteCommand : ShakeCardWasteCommand){
+        var cardView = this.wasteView.getLastCard();
+        if(cardView == null)
+            return;
+        cardView.shake();
+        await Utils.sleep(100);
+    }
+
+    private moveCardToPile(cardDatas : CardData[], cardViewPops : CardView[], endPile: PileView) : void{
+        let numberCardEndPile = endPile.NumberCard;
+        for(let i = 0; i < cardViewPops.length;i++){
+            cardViewPops[i].UpdateData(cardDatas[i],cardDatas[i].isOpen);
+            this.changeCardToTopLayer(cardViewPops[i]);
+            let destinationWorldPos = endPile.getCardWorldPosByIndex(numberCardEndPile + i);
+            cardViewPops[i].move(destinationWorldPos,()=>{
+                endPile.addCard(cardViewPops[i]);
+            });
+        }
+    }
+
+    private async processMoveTableauToTableau( moveTableauToTableauCommand : MoveTableauToTableauCommand){
+        let startIndex = moveTableauToTableauCommand.StartIndex;
+        let endIndex = moveTableauToTableauCommand.EndIndex;
+        let cardIndex = moveTableauToTableauCommand.CardIndex;
+        let cardDatas = moveTableauToTableauCommand.CardDatas;
+        //
+        let cardViewPops = this.tableauPileViews[startIndex].removeCardsFromIndex(cardIndex);
+        let endPile = this.tableauPileViews[endIndex];
+        this.moveCardToPile(cardDatas,cardViewPops,endPile);
+        this.tableauPileViews[startIndex].resize();
+        await Utils.sleep(350);
+    }
+
+    private async processMoveTableauToFoundation( moveTableauToTableauCommand : MoveTableauToFoundationCommand){
+        let startIndex = moveTableauToTableauCommand.StartIndex;
+        let endIndex = moveTableauToTableauCommand.EndIndex;
+        let cardIndex = moveTableauToTableauCommand.CardIndex;
+        let cardDatas = moveTableauToTableauCommand.CardDatas;
+        //
+        let cardViewPops = this.tableauPileViews[startIndex].removeCardsFromIndex(cardIndex);
+        let endPile = this.foundationViews[endIndex];
+        this.moveCardToPile(cardDatas,cardViewPops,endPile);
+        this.tableauPileViews[startIndex].resize();
+        await Utils.sleep(350);
+
+    }
+    
+    private async processMoveFoundationToTableau( moveFoundationToTableauCommand : MoveFoundationToTableauCommand){
+        let startIndex = moveFoundationToTableauCommand.StartIndex;
+        let endIndex = moveFoundationToTableauCommand.EndIndex;
+        let cardIndex = moveFoundationToTableauCommand.CardIndex;
+        let cardDatas = moveFoundationToTableauCommand.CardDatas;
+        //
+        let cardViewPops = this.foundationViews[startIndex].removeCardsFromIndex(cardIndex);
+        let endPile = this.tableauPileViews[endIndex];
+        this.moveCardToPile(cardDatas,cardViewPops,endPile);
+        await Utils.sleep(350);
+    }
+
+    private async processMoveWasteToTableau( moveWasteToTableauCommand : MoveWasteToTableauCommand){
+        let endIndex = moveWasteToTableauCommand.EndIndex;
+        let cardIndex = moveWasteToTableauCommand.CardIndex;
+        let cardDatas = moveWasteToTableauCommand.CardDatas;
+        //
+        let cardViewPops = this.wasteView.removeCardsFromIndex(cardIndex);
+        let endPile = this.tableauPileViews[endIndex];
+        this.moveCardToPile(cardDatas,cardViewPops,endPile);
+        await Utils.sleep(350);
+    }
+
+    private async processMoveWasteToFoundation( moveWasteToFoundationCommand : MoveWasteToFoundationCommand){
+        let endIndex = moveWasteToFoundationCommand.EndIndex;
+        let cardIndex = moveWasteToFoundationCommand.CardIndex;
+        let cardDatas = moveWasteToFoundationCommand.CardDatas;
+        //
+        let cardViewPops = this.wasteView.removeCardsFromIndex(cardIndex);
+        let endPile = this.foundationViews[endIndex];
+        this.moveCardToPile(cardDatas,cardViewPops,endPile);
+        await Utils.sleep(350);
+    }
+
+    private async processOpenLastCardTableau( openLastCardTableauCommand : OpenLastCardTableauCommand){
+        let cardData = openLastCardTableauCommand.CardData;
+        let index = openLastCardTableauCommand.Index;
+
+        let lastCardView = this.tableauPileViews[index].getLastCard();
+        lastCardView.UpdateData(cardData,false);
+        lastCardView.flipOpen();
+        await Utils.sleep(320);
+    }
+
+    private async processGameResult( gameResultCommand : GameResultCommand){
+        log("processGameResult - isWin: " + gameResultCommand.IsWin);
+
     }
 
     private changeCardToTopLayer(cardView : CardView){
@@ -189,6 +363,8 @@ export class MainGameController extends Component {
     }
 
     private onCheckPileTouchEnd(pile: PileView,cardIndex : number) : void{
+        if(cardIndex == -1)
+            return;
         if(pile instanceof TableauPileView){
             this.solitaireLogic.CheckCardFromTableau(pile.Index, cardIndex);
         }

@@ -17,6 +17,12 @@ export class TableauPileView extends PileView {
     public getCardPosByIndex(index: number) : Vec3{
         return new Vec3(0,this.height/2 - this.CARD_SIZE.y/2 - index*this.CARD_SPACE_Y);
     }
+
+    protected reArrangeCardPosition() : void{
+        for(let i = 0; i < this.cards.length;i++){
+            this.cards[i].node.setPosition(this.getCardPosByIndex(i));
+        }
+    }
    
     protected onTouchEnd(touch: EventTouch) : void{
         

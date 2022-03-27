@@ -18,6 +18,10 @@ export abstract class PileView extends Component {
     protected cards : CardView[] = null;
     protected height : number = 0;
 
+    public get NumberCard() {
+        return this.cards.length;
+    }
+
     start(){
         this.cards = [];
         this.node.on(Node.EventType.TOUCH_END,this.onTouchEnd,this,true);
@@ -25,6 +29,11 @@ export abstract class PileView extends Component {
 
     public init(index: number) : void{
         this.index = index;
+    }
+
+    public resize() : void{
+        this.updateSize(this.cards.length);
+        this.reArrangeCardPosition();
     }
 
     public addCards(cards : CardView[]) : void{
@@ -38,10 +47,16 @@ export abstract class PileView extends Component {
     }
 
     public addCard(card : CardView) : void{
+        let newPos = this.getCardPosByIndex(this.cards.length);
         this.updateSize(this.cards.length + 1); 
         card.node.setParent(this.node);
-        card.node.setPosition(this.getCardPosByIndex(0));
+        card.node.setPosition(newPos);
         this.cards.push(card);
+        this.reArrangeCardPosition();
+    }
+
+    protected reArrangeCardPosition():void{
+        
     }
 
     protected updateSize(numberCards : number) : void {
@@ -73,6 +88,10 @@ export abstract class PileView extends Component {
         if(this.cards.length == 0)
             return null;
         return this.cards.pop();
+    }
+
+    public removeCardsFromIndex(index : number) : CardView[]{
+        return this.cards.splice(index,this.cards.length-index);
     }
 
     protected onTouchEnd(touch: EventTouch) : void{

@@ -7,6 +7,10 @@ export enum Suit{
 }
 
 export class CardData {
+
+    public static readonly RANK_A : number = 1;
+    public static readonly RANK_K : number = 13;
+
     public suit : Suit = Suit.Heart;
     public rank : number = 0;
     public isRed : boolean;

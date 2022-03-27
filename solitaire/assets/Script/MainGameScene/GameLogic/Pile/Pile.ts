@@ -30,5 +30,19 @@ export class Pile {
         return cardAddeds.length > 0;
     }
 
+    public getCardByIndex(index : number) : CardData{
+        if(index < 0 || index >= this.cards.length)
+            return null;
+        return this.cards[index];
+    }
+
+    public getLastCard() : CardData{
+        return this.getCardByIndex(this.cards.length-1);
+    }
+
+    public getCardsFromIndex(index : number) : CardData[]{
+        return this.cards.splice(index,this.cards.length-index);
+    }
+
 }
 
