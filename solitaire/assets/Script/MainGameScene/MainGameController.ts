@@ -13,11 +13,15 @@ import { PileView } from './PileView/PileView';
 import { StockPileView } from './PileView/StockPileView';
 import { TableauPileView } from './PileView/TableauPileView';
 import { WastePileView } from './PileView/WastePileView';
+import { MenuPopup } from './UI/MenuPopup';
 const { ccclass, property } = _decorator;
  
 @ccclass('MainGameController')
 export class MainGameController extends Component {
     
+    @property(MenuPopup)
+    private menuPopup : MenuPopup = null;
+
     @property(Node)
     private blockTouchLayer : Node = null;
 
@@ -43,11 +47,19 @@ export class MainGameController extends Component {
 
     private solitaireLogic : SolitaireLogic = null;
     start () {
-        this.solitaireLogic = new SolitaireLogic(new SureWinTemplateShuffle());
+        this.solitaireLogic = new SolitaireLogic(new SimpleShuffle());
         this.solitaireLogic.processCommand = this.processCommand.bind(this);
         this.createAllCards();
         this.initPile();
-        this.solitaireLogic.StartGame();
+        this.delayStart();
+        //
+        this.menuPopup.newgameClickCallback = this.onNewGameClick.bind(this);
+        this.menuPopup.replayClickCallback = this.onReplayClick.bind(this);
+    }
+
+    private async delayStart(){
+        await Utils.sleep(500);
+        this.solitaireLogic.StartGame(true);
     }
 
     private initPile() : void{
@@ -67,10 +79,6 @@ export class MainGameController extends Component {
             tableauView.init(i);
         }
     }
-
-    public Click(): void{
-        this.solitaireLogic.StartGame();
-    }    
 
     private async processCommand(gameCommandDatas : GameCommandData[]){
         this.blockTouchLayer.active = true;
@@ -170,6 +178,7 @@ export class MainGameController extends Component {
 
     private async processShuffle(shuffleCommand : ShuffleCommand){
         log("processShuffle");
+        this.collectAllCards();
         await Utils.sleep(500);
     }
 
@@ -349,6 +358,7 @@ export class MainGameController extends Component {
 
     private async processGameResult( gameResultCommand : GameResultCommand){
         log("processGameResult - isWin: " + gameResultCommand.IsWin);
+        this.menuPopup.show("Victory");
 
     }
 
@@ -374,5 +384,45 @@ export class MainGameController extends Component {
         else if(pile instanceof WastePileView){
             this.solitaireLogic.CheckCardFromWaste(cardIndex);
         }
+    }
+
+    private collectAllCards() : void{
+        this.stockView.removeCardsFromIndex(0);
+        this.stockView.resize();
+        //
+        this.wasteView.removeCardsFromIndex(0);
+        this.wasteView.resize();
+        //
+        this.foundationViews.forEach((foundation)=>{
+            foundation.removeCardsFromIndex(0);
+            foundation.resize();
+        });
+        //
+        this.tableauPileViews.forEach((tableau)=>{
+            tableau.removeCardsFromIndex(0);
+            tableau.resize();
+        });
+        //
+        this.cardViews.forEach((cardView)=>{
+            cardView.node.setParent(this.topLayer);
+            cardView.node.setWorldPosition(this.stockView.node.worldPosition);
+            cardView.Close();
+        });
+    }
+
+    public onMenuClick() : void{
+        this.menuPopup.show("Setting");
+    }
+
+    public onUndoClick() : void{
+
+    }
+
+    public onNewGameClick() : void{
+        this.solitaireLogic.StartGame(true);
+    }
+
+    public onReplayClick() : void{
+        this.solitaireLogic.StartGame(false);
     }
 }

@@ -40,8 +40,8 @@ export class CardView extends Component {
     @property(Node)
     private cardBack : Node = null;
 
-    start () {
-        
+    public Close() : void{
+        this.cardBack.active = true;
     }
 
     public UpdateData(cardData: CardData, isOpen : boolean) : void{

@@ -26,6 +26,7 @@ export class SolitaireLogic {
     public processCommand : (gameCommandDatas : GameCommandData[]) => void = null;
 
     private cards : CardData[] = null;
+    private replayCards : CardData[] = null;
     private shuffleAlgorithm : IShuffle = null;
 
     private stockPile : Pile = null;
@@ -33,10 +34,12 @@ export class SolitaireLogic {
     private foundationPiles : Pile[] = null;
     private tableauPiles : Pile[] = null;
     private checkMovePiles : Pile[] = null;
+    
 
     constructor(shuffle : IShuffle){
         this.cards = new Array<CardData>();
-        this.initCard(this.cards);
+        this.replayCards = new Array<CardData>();
+        this.initCard();
         this.initPiles();
         this.shuffleAlgorithm = shuffle;
     }
@@ -60,7 +63,7 @@ export class SolitaireLogic {
         Array.prototype.push.apply(this.checkMovePiles, this.tableauPiles);
     }
 
-    private initCard(cards : CardData[]) : void{
+    private initCard() : void{
         
         let enumSuits = new Array<string>();
         for (let name in Suit) {
@@ -74,14 +77,50 @@ export class SolitaireLogic {
             for(let i = 1; i <= 13;i++){
                 var temp = enumSuits[suit];
                 var enumValue : Suit = (<any>Suit)[enumSuits[suit]];
-                cards.push(new CardData(i,enumValue));
+                this.cards.push(new CardData(i,enumValue));
+                this.replayCards.push(new CardData(i,enumValue));
             }
         }
     }
 
-    public StartGame() : void{
+    private collectAllCards() : void{
+        var stockCards = this.stockPile.getCardsFromIndex(0);
+        if(stockCards != null || stockCards.length != 0)
+            Array.prototype.push.apply(this.cards, stockCards);
+        //
+        var wasteCards = this.watsePile.getCardsFromIndex(0);
+        if(wasteCards != null || wasteCards.length != 0)
+            Array.prototype.push.apply(this.cards, wasteCards);
+        //
+        this.foundationPiles.forEach((foundation)=>{
+            var foundationCards = foundation.getCardsFromIndex(0);
+            if(foundationCards != null || foundationCards.length != 0)
+                Array.prototype.push.apply(this.cards, foundationCards);
+        });
+        //
+        this.tableauPiles.forEach((tableau)=>{
+            var tableauCards = tableau.getCardsFromIndex(0);
+            if(tableauCards != null || tableauCards.length != 0)
+                Array.prototype.push.apply(this.cards, tableauCards);
+        });
+    }
+
+    public StartGame(isNewGame : boolean) : void{
+
+        this.collectAllCards();
         //shuffle
-        this.shuffleAlgorithm.Shuffle(this.cards);
+        if(isNewGame){
+            this.shuffleAlgorithm.Shuffle(this.cards);
+            for(let i = 0; i < this.cards.length;i++){
+                this.replayCards[i].updateData(this.cards[i]);
+            }
+        }
+        // replay
+        else{
+            for(let i = 0; i < this.replayCards.length;i++){
+                this.cards[i].updateData(this.replayCards[i]);
+            }
+        }
         // close all card
         this.cards.forEach((card)=>{
             card.isOpen = false;

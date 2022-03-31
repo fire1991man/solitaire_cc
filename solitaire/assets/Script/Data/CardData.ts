@@ -21,5 +21,12 @@ export class CardData {
         this.rank = rank;
         this.isRed = this.suit === Suit.Heart ||  this.suit === Suit.Diamond;
     }
+
+    public updateData(cardData : CardData) : void{
+        this.suit = cardData.suit;
+        this.rank = cardData.rank;
+        this.isRed = cardData.isRed;
+        this.isOpen = cardData.isOpen;
+    }
 }
 
