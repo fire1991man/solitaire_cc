@@ -1,5 +1,5 @@
 
-import { _decorator, Component, Node, log, Prefab, instantiate } from 'cc';
+import { _decorator, Component, Node, log, Prefab, instantiate, AudioClip, AudioSource } from 'cc';
 import { CardData, Suit } from '../Data/CardData';
 import { Utils } from '../Utils/Utils';
 import { CardView } from './Card/CardView';
@@ -19,6 +19,15 @@ const { ccclass, property } = _decorator;
 @ccclass('MainGameController')
 export class MainGameController extends Component {
     
+    @property(AudioSource)
+    private audioSource : AudioSource = null;
+
+    @property(AudioClip)
+    private touchCardSfx : AudioClip = null;
+
+    @property(AudioClip)
+    private wrongMoveSfx : AudioClip = null;
+
     @property(MenuPopup)
     private menuPopup : MenuPopup = null;
 
@@ -228,6 +237,7 @@ export class MainGameController extends Component {
                 this.wasteView.addCard(cardView);
             });
         });
+        this.audioSource.playOneShot(this.touchCardSfx, 0.8);
         await Utils.sleep(350);
     }
 
@@ -242,6 +252,7 @@ export class MainGameController extends Component {
                 });
             });
         }
+        this.audioSource.playOneShot(this.touchCardSfx, 0.8);
         await Utils.sleep(350);
     }
 
@@ -252,6 +263,7 @@ export class MainGameController extends Component {
         if(cardView == null)
             return;
         cardView.shake();
+        this.audioSource.playOneShot(this.wrongMoveSfx, 1);
         await Utils.sleep(100);
     }
 
@@ -262,6 +274,7 @@ export class MainGameController extends Component {
         if(cardView == null)
             return;
         cardView.shake();
+        this.audioSource.playOneShot(this.wrongMoveSfx, 1);
         await Utils.sleep(100);
     }
 
@@ -270,10 +283,12 @@ export class MainGameController extends Component {
         if(cardView == null)
             return;
         cardView.shake();
+        this.audioSource.playOneShot(this.wrongMoveSfx, 1);
         await Utils.sleep(100);
     }
 
     private moveCardToPile(cardDatas : CardData[], cardViewPops : CardView[], endPile: PileView) : void{
+        this.audioSource.playOneShot(this.touchCardSfx, 0.8);
         let numberCardEndPile = endPile.NumberCard;
         for(let i = 0; i < cardViewPops.length;i++){
             cardViewPops[i].UpdateData(cardDatas[i],cardDatas[i].isOpen);
