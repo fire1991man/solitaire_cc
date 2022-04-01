@@ -3,7 +3,7 @@ import { _decorator, Component, Node, log, Prefab, instantiate, AudioClip, Audio
 import { CardData, Suit } from '../Data/CardData';
 import { Utils } from '../Utils/Utils';
 import { CardView } from './Card/CardView';
-import { Command, DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand } from './GameCommand/GameCommand';
+import { Command, DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand, UndoFoundationToTableauCommand, UndoRefillStockCommand, UndoStockToWasteCommand, UndoTableauToFoundationCommand, UndoTableauToTableauCommand, UndoWasteToFoundationCommand, UndoWasteToTableauCommand } from './GameCommand/GameCommand';
 import { StockPile } from './GameLogic/Pile/StockPile';
 import { SimpleShuffle } from './GameLogic/Shuffle/SimpleShuffle';
 import { SureWinTemplateShuffle } from './GameLogic/Shuffle/SureWinTemplateShuffle';
@@ -169,6 +169,41 @@ export class MainGameController extends Component {
                         await this.processGameResult(<GameResultCommand> gameCommandData);
                     }
                     break;
+                case Command.UNDO_REFILL_STOCK:
+                    {
+                        await this.processUndoRefillStock(<UndoRefillStockCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_STOCK_TO_WASTE:
+                    {
+                        await this.processUndoStockToWaste(<UndoStockToWasteCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_TABLEAU_TO_FOUNDATION:
+                    {
+                        await this.processUndoTableauToFoundation(<UndoTableauToFoundationCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_FOUNDATION_TO_TABLEAU:
+                    {
+                        await this.processUndoFoundationToTableau(<UndoFoundationToTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_WASTE_TO_TABLEAU:
+                    {
+                        await this.processUndoWasteToTableau(<UndoWasteToTableauCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_WASTE_TO_FOUNDATION:
+                    {
+                        await this.processUndoWasteToFoundation(<UndoWasteToFoundationCommand> gameCommandData);
+                    }
+                    break;
+                case Command.UNDO_TABLEAU_TO_TABLEAU:
+                    {
+                        await this.processUndoTableauToTableau(<UndoTableauToTableauCommand> gameCommandData);
+                    }
+                    break;
             }
         }
         this.blockTouchLayer.active = false;
@@ -238,7 +273,7 @@ export class MainGameController extends Component {
             });
         });
         this.audioSource.playOneShot(this.touchCardSfx, 0.8);
-        await Utils.sleep(350);
+        await Utils.sleep(450);
     }
 
     private async processRefillStock( refillStockCommand : RefillStockCommand){
@@ -377,6 +412,157 @@ export class MainGameController extends Component {
 
     }
 
+    private async processUndoStockToWaste( undoStockToWasteCommand : UndoStockToWasteCommand){
+        var lastCardWasteView = this.wasteView.removeLastCard();
+        let destinationWorldPos = this.stockView.getCardWorldPosByIndex(0);
+             
+        lastCardWasteView.flipClose(()=>{
+            lastCardWasteView.move(destinationWorldPos,()=>{
+                    this.stockView.addCard(lastCardWasteView);
+            });
+        });
+        await Utils.sleep(320);
+    }
+
+    private async processUndoRefillStock( undoRefillStockCommand : UndoRefillStockCommand){
+        var cardDatas = undoRefillStockCommand.CardDatas;
+        //
+        let destinationWorldPos = this.wasteView.getCardWorldPosByIndex(0);
+        let temp : CardView[] = [];
+        for(let i = 0; i < cardDatas.length; i ++){
+            let tempCardView = this.stockView.removeLastCard();
+            tempCardView.node.active = i == cardDatas.length-1;
+            tempCardView.UpdateData(cardDatas[i],false);
+            this.changeCardToTopLayer(tempCardView);
+            tempCardView.move(destinationWorldPos,()=>{
+                tempCardView.flipOpen(()=>{
+                    this.wasteView.addCard(tempCardView);
+                });
+            });
+            //
+            temp.push(tempCardView);
+        }
+        await Utils.sleep(600);
+        temp.forEach((cardView)=>{
+            cardView.node.active = true;
+        });
+    }
+
+    private async processUndoTableauToFoundation(undoTableauToFoundationCommand : UndoTableauToFoundationCommand){
+        let tableauIndex = undoTableauToFoundationCommand.TableauIndex;
+        let foundationIndex = undoTableauToFoundationCommand.FoundationIndex;
+        let isOpenLastCard = undoTableauToFoundationCommand.IsOpenLastCard;
+        let cardData = undoTableauToFoundationCommand.CardData;
+        let lastCardTableauIndex = undoTableauToFoundationCommand.LastCardTableauIndex;
+        //
+        let cardView = this.foundationViews[foundationIndex].removeLastCard();
+        cardView.UpdateData(cardData,cardData.isOpen);
+        this.changeCardToTopLayer(cardView);
+        let destinationWorldPos = this.tableauPileViews[tableauIndex].getCardWorldPosByIndex(lastCardTableauIndex);
+        let lastCardViewTableau = this.tableauPileViews[tableauIndex].getLastCard();
+        if(!isOpenLastCard){
+            lastCardViewTableau.flipClose(()=>{
+                cardView.move(destinationWorldPos,()=>{
+                    this.tableauPileViews[tableauIndex].addCard(cardView);
+                });
+            });
+            await Utils.sleep(600);
+        }
+        else{
+            cardView.move(destinationWorldPos,()=>{
+                this.tableauPileViews[tableauIndex].addCard(cardView);
+            });
+            await Utils.sleep(400);
+        }
+    }
+
+    private async processUndoFoundationToTableau(undoFoundationToTableauCommand : UndoFoundationToTableauCommand){
+        let tableauIndex = undoFoundationToTableauCommand.TableauIndex;
+        let foundationIndex = undoFoundationToTableauCommand.FoundationIndex;
+        let cardData = undoFoundationToTableauCommand.CardData;
+        //
+        let cardView = this.tableauPileViews[tableauIndex].removeLastCard();
+        cardView.UpdateData(cardData,cardData.isOpen);
+        this.changeCardToTopLayer(cardView);
+        let destinationWorldPos = this.foundationViews[foundationIndex].getCardWorldPosByIndex(0);
+        cardView.move(destinationWorldPos,()=>{
+            this.foundationViews[foundationIndex].addCard(cardView);
+        });
+        await Utils.sleep(350);
+    }
+
+    private async processUndoWasteToTableau(undoWasteToTableauCommand : UndoWasteToTableauCommand){
+        let tableauIndex = undoWasteToTableauCommand.TableauIndex;
+        let cardData = undoWasteToTableauCommand.CardData;
+        //
+        let cardView = this.tableauPileViews[tableauIndex].removeLastCard();
+        this.tableauPileViews[tableauIndex].resize();
+        cardView.UpdateData(cardData,cardData.isOpen);
+        this.changeCardToTopLayer(cardView);
+        let destinationWorldPos = this.wasteView.getCardWorldPosByIndex(0);
+        cardView.move(destinationWorldPos,()=>{
+            this.wasteView.addCard(cardView);
+        });
+        await Utils.sleep(350);
+    }
+
+    private async processUndoWasteToFoundation(undoWasteToFoundationCommand : UndoWasteToFoundationCommand){
+        let foundationIndex = undoWasteToFoundationCommand.FoundationIndex;
+        let cardData = undoWasteToFoundationCommand.CardData;
+        //
+        let cardView = this.foundationViews[foundationIndex].removeLastCard();
+        cardView.UpdateData(cardData,cardData.isOpen);
+        this.changeCardToTopLayer(cardView);
+        let destinationWorldPos = this.wasteView.getCardWorldPosByIndex(0);
+        cardView.move(destinationWorldPos,()=>{
+            this.wasteView.addCard(cardView);
+        });
+        await Utils.sleep(350);
+    }
+
+    private async processUndoTableauToTableau(undoTableauToTableauCommand : UndoTableauToTableauCommand){
+        let tableauStartIndex = undoTableauToTableauCommand.TableauStartIndex;
+        let tableauEndIndex = undoTableauToTableauCommand.TableauEndIndex;
+        let isOpenLastCard = undoTableauToTableauCommand.IsOpenLastCard;
+        let cardDatas = undoTableauToTableauCommand.CardDatas;
+        let lastCardTableauStartIndex = undoTableauToTableauCommand.LastCardTableauStartIndex;
+        let tableauEndCardAddIndex = undoTableauToTableauCommand.TableauEndCardAddIndex;
+        //
+        let cardViews = this.tableauPileViews[tableauEndIndex].removeCardsFromIndex(tableauEndCardAddIndex);
+        for(let i = 0 ; i < cardDatas.length;i++)
+        cardViews[i].UpdateData(cardDatas[i],cardDatas[i].isOpen);
+        
+
+        let lastCardViewTableau = this.tableauPileViews[tableauStartIndex].getLastCard();
+        if(!isOpenLastCard){
+            lastCardViewTableau.flipClose(()=>{
+                this.tableauPileViews[tableauEndIndex].resize();
+                for(let i =0 ; i < cardViews.length;i++){
+                    let cardView = cardViews[i];
+                    this.changeCardToTopLayer(cardView);
+                    let destinationWorldPos = this.tableauPileViews[tableauStartIndex].getCardWorldPosByIndex(lastCardTableauStartIndex + i);
+                    cardView.move(destinationWorldPos,()=>{
+                        this.tableauPileViews[tableauStartIndex].addCard(cardView);
+                    });
+                }
+            });
+            await Utils.sleep(600);
+        }
+        else{
+            this.tableauPileViews[tableauEndIndex].resize();
+            for(let i =0 ; i < cardViews.length;i++){
+                let cardView = cardViews[i];
+                this.changeCardToTopLayer(cardView);
+                let destinationWorldPos = this.tableauPileViews[tableauStartIndex].getCardWorldPosByIndex(lastCardTableauStartIndex + i);
+                cardView.move(destinationWorldPos,()=>{
+                    this.tableauPileViews[tableauStartIndex].addCard(cardView);
+                });
+            }
+            await Utils.sleep(400);
+        }
+        
+    }
+
     private changeCardToTopLayer(cardView : CardView){
         let worldPos = cardView.node.worldPosition;
         cardView.node.setParent(this.topLayer);
@@ -430,7 +616,7 @@ export class MainGameController extends Component {
     }
 
     public onUndoClick() : void{
-
+        this.solitaireLogic.undo();
     }
 
     public onNewGameClick() : void{

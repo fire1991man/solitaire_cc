@@ -1,7 +1,7 @@
 import { CardData, Suit } from "../../Data/CardData";
 import { log } from 'cc';
 import { IShuffle } from "./Shuffle/IShuffle";
-import { DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand } from "../GameCommand/GameCommand";
+import { Command, DealCardsCommand, GameCommandData, GameResultCommand, MoveFoundationToTableauCommand, MoveTableauToFoundationCommand, MoveTableauToTableauCommand, MoveWasteToFoundationCommand, MoveWasteToTableauCommand, OpenLastCardAllTableauCommand, OpenLastCardTableauCommand, RefillStockCommand, ShakeCardFoundationCommand, ShakeCardTaleauCommand, ShakeCardWasteCommand, ShuffleCommand, StockToWasteCommand, UndoFoundationToTableauCommand, UndoRefillStockCommand, UndoStockToWasteCommand, UndoTableauToFoundationCommand, UndoTableauToTableauCommand, UndoWasteToFoundationCommand, UndoWasteToTableauCommand } from "../GameCommand/GameCommand";
 import { Pile } from "./Pile/Pile";
 import { StockPile } from "./Pile/StockPile";
 import { WastePile } from "./Pile/WastePile";
@@ -34,9 +34,11 @@ export class SolitaireLogic {
     private foundationPiles : Pile[] = null;
     private tableauPiles : Pile[] = null;
     private checkMovePiles : Pile[] = null;
+    private undoCommand : GameCommandData[] = null;
     
 
     constructor(shuffle : IShuffle){
+        this.undoCommand = [];
         this.cards = new Array<CardData>();
         this.replayCards = new Array<CardData>();
         this.initCard();
@@ -84,22 +86,22 @@ export class SolitaireLogic {
     }
 
     private collectAllCards() : void{
-        var stockCards = this.stockPile.getCardsFromIndex(0);
+        var stockCards = this.stockPile.removeCardsFromIndex(0);
         if(stockCards != null || stockCards.length != 0)
             Array.prototype.push.apply(this.cards, stockCards);
         //
-        var wasteCards = this.watsePile.getCardsFromIndex(0);
+        var wasteCards = this.watsePile.removeCardsFromIndex(0);
         if(wasteCards != null || wasteCards.length != 0)
             Array.prototype.push.apply(this.cards, wasteCards);
         //
         this.foundationPiles.forEach((foundation)=>{
-            var foundationCards = foundation.getCardsFromIndex(0);
+            var foundationCards = foundation.removeCardsFromIndex(0);
             if(foundationCards != null || foundationCards.length != 0)
                 Array.prototype.push.apply(this.cards, foundationCards);
         });
         //
         this.tableauPiles.forEach((tableau)=>{
-            var tableauCards = tableau.getCardsFromIndex(0);
+            var tableauCards = tableau.removeCardsFromIndex(0);
             if(tableauCards != null || tableauCards.length != 0)
                 Array.prototype.push.apply(this.cards, tableauCards);
         });
@@ -107,6 +109,7 @@ export class SolitaireLogic {
 
     public StartGame(isNewGame : boolean) : void{
 
+        this.undoCommand.length = 0;
         this.collectAllCards();
         //shuffle
         if(isNewGame){
@@ -164,7 +167,7 @@ export class SolitaireLogic {
                     if(cardData.rank != CardData.RANK_A)
                         continue;
                     // add card A to empty foundation
-                    let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                    let cardPops = choosePile.removeCardsFromIndex(cardIndex);
                     Array.prototype.push.apply(foundationPile.Cards, cardPops);
                     return new ResultCheckMove(i,cardPops);
                 }
@@ -175,7 +178,7 @@ export class SolitaireLogic {
                     if(cardData.rank - lastCardInFoundation.rank != 1)
                         continue;
                     // add card to foundation
-                    let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                    let cardPops = choosePile.removeCardsFromIndex(cardIndex);
                     Array.prototype.push.apply(foundationPile.Cards, cardPops);
                     return new ResultCheckMove(i,cardPops);
                 }
@@ -183,8 +186,6 @@ export class SolitaireLogic {
         }
         return null;
     }
-
-    
 
     private checkCardInTableau(cardData : CardData, choosePile: Pile,
                          tableauIndex : number, cardIndex : number) : ResultCheckMove{
@@ -198,7 +199,7 @@ export class SolitaireLogic {
                 if(cardData.rank != CardData.RANK_K)
                     continue;
                 // add card K to empty foundation
-                let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                let cardPops = choosePile.removeCardsFromIndex(cardIndex);
                 Array.prototype.push.apply(tableauPile.Cards, cardPops);
                 return new ResultCheckMove(i,cardPops);
             }
@@ -209,7 +210,7 @@ export class SolitaireLogic {
                 if(lastCardInTabeau.rank - cardData.rank != 1)
                     continue;
                 // add card to tableau
-                let cardPops = choosePile.getCardsFromIndex(cardIndex);
+                let cardPops = choosePile.removeCardsFromIndex(cardIndex);
                 Array.prototype.push.apply(tableauPile.Cards, cardPops);
                 return new ResultCheckMove(i,cardPops);
             }
@@ -238,6 +239,7 @@ export class SolitaireLogic {
                                             resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas)); 
                 // open last card start tableau
                 var lastCardInStartTableau = this.tableauPiles[tableauIndex].getLastCard();
+                let isOpenLastCard = lastCardInStartTableau != null ? lastCardInStartTableau.isOpen : true;
                 if(lastCardInStartTableau != null && !lastCardInStartTableau.isOpen){
                     lastCardInStartTableau.isOpen = true;
                     gameCommandDatas.push(new OpenLastCardTableauCommand(lastCardInStartTableau,tableauIndex));  
@@ -245,6 +247,8 @@ export class SolitaireLogic {
                 // check win
                 if(this.isWinGame())
                     gameCommandDatas.push(new GameResultCommand(true));
+                // Undo
+                this.undoCommand.push(new UndoTableauToFoundationCommand(isOpenLastCard,resultCheckMove.endPileIndex,tableauIndex));
             }   
             else{
                 resultCheckMove = this.checkCardInTableau(cardData,choosePile,tableauIndex,cardIndex);
@@ -253,10 +257,15 @@ export class SolitaireLogic {
                                             resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
                     // open last card start tableau
                     var lastCardInStartTableau = this.tableauPiles[tableauIndex].getLastCard();
+                    let isOpenLastCard = lastCardInStartTableau != null ? lastCardInStartTableau.isOpen : true;
                     if(lastCardInStartTableau != null && !lastCardInStartTableau.isOpen){
                         lastCardInStartTableau.isOpen = true;
                         gameCommandDatas.push(new OpenLastCardTableauCommand(lastCardInStartTableau,tableauIndex));
                     }
+                    // Undo
+                    let tableauEndCardAddIndex = this.tableauPiles[resultCheckMove.endPileIndex].Cards.length - resultCheckMove.cardDatas.length;
+                    this.undoCommand.push(new UndoTableauToTableauCommand(isOpenLastCard,tableauIndex,
+                                                                        resultCheckMove.endPileIndex,tableauEndCardAddIndex));
                 }
                 else
                     gameCommandDatas.push(new ShakeCardTaleauCommand(cardIndex,tableauIndex));
@@ -276,9 +285,12 @@ export class SolitaireLogic {
             return;
         let gameCommandDatas : GameCommandData[] = [];
         let resultCheckMove = this.checkCardInTableau(cardData,choosePile,-1,cardIndex);
-        if( resultCheckMove != null)
+        if( resultCheckMove != null){
             gameCommandDatas.push(new MoveFoundationToTableauCommand(foundationIndex,
                                     resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
+            // Undo
+            this.undoCommand.push(new UndoFoundationToTableauCommand(foundationIndex,resultCheckMove.endPileIndex));
+        }
         else
             gameCommandDatas.push(new ShakeCardFoundationCommand(cardIndex,foundationIndex));
 
@@ -300,17 +312,23 @@ export class SolitaireLogic {
 
         if( resultCheckMove != null){
             gameCommandDatas.push(new MoveWasteToFoundationCommand(
-                                            resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));   
+                                            resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));  
             if(this.isWinGame())
                 gameCommandDatas.push(new GameResultCommand(true));
+            // Undo
+            this.undoCommand.push(new UndoWasteToFoundationCommand( resultCheckMove.endPileIndex));
         }   
         else{
             resultCheckMove = this.checkCardInTableau(cardData,choosePile,-1,cardIndex);
-            if( resultCheckMove != null)
+            if( resultCheckMove != null){
                 gameCommandDatas.push(new MoveWasteToTableauCommand(
                                         resultCheckMove.endPileIndex,cardIndex,resultCheckMove.cardDatas));
+                // Undo
+                this.undoCommand.push(new UndoWasteToTableauCommand( resultCheckMove.endPileIndex));
+            }
             else
                 gameCommandDatas.push(new ShakeCardWasteCommand());
+           
         }
 
         if(this.processCommand != null)
@@ -330,6 +348,8 @@ export class SolitaireLogic {
                 this.stockPile.Cards.push(cardData);
             }
             gameCommandDatas.push(new RefillStockCommand(this.stockPile.Cards.length));
+             // undo
+             this.undoCommand.push(new UndoRefillStockCommand());
         }
         else{
             let lastCardStock = this.stockPile.Cards.pop();
@@ -337,10 +357,112 @@ export class SolitaireLogic {
             this.watsePile.Cards.push(lastCardStock);
             
             gameCommandDatas.push(new StockToWasteCommand(lastCardStock));
+            // undo
+            this.undoCommand.push(new UndoStockToWasteCommand());
         }
 
         if(this.processCommand != null)
-                this.processCommand(gameCommandDatas);
+            this.processCommand(gameCommandDatas);
+    }
+
+    public undo() : void{
+        if(this.undoCommand.length == 0)
+            return;
+        let gameCommandDatas : GameCommandData[] = [];
+        //
+        var gameCommand = this.undoCommand.pop();
+        switch(gameCommand.Command){
+            case Command.UNDO_STOCK_TO_WASTE:
+                {
+                    var lastCardWaste = this.watsePile.Cards.pop();
+                    lastCardWaste.isOpen = false;
+                    this.stockPile.Cards.push(lastCardWaste);
+                    //
+                    gameCommandDatas.push(gameCommand);
+                }
+                break;
+            case Command.UNDO_REFILL_STOCK:
+                {
+                    while(this.stockPile.Cards.length != 0){
+                        var cardData = this.stockPile.Cards.pop();
+                        cardData.isOpen = true;
+                        this.watsePile.Cards.push(cardData);
+                    }
+                    //
+                    let undoRefilStock = <UndoRefillStockCommand>gameCommand;
+                    undoRefilStock.updateData(this.watsePile.Cards);
+                    //
+                    gameCommandDatas.push(undoRefilStock);
+                }
+                break;
+                case Command.UNDO_TABLEAU_TO_FOUNDATION:
+                    {
+                        let undoTableauToFoundation = <UndoTableauToFoundationCommand>gameCommand;
+                        let cardData = this.foundationPiles[undoTableauToFoundation.FoundationIndex].removeLastCard();
+                        //
+                        let tableauPile = this.tableauPiles[undoTableauToFoundation.TableauIndex];
+                        let lastCardPile = tableauPile.getLastCard();
+                        let lastCardTableauIndex = tableauPile.Cards.length;
+                        if(lastCardPile != null)
+                            lastCardPile.isOpen = undoTableauToFoundation.IsOpenLastCard;  
+                        tableauPile.addCard(cardData[0]);
+                        //
+                        undoTableauToFoundation.updateData(cardData[0],lastCardTableauIndex);
+                        //
+                        gameCommandDatas.push(undoTableauToFoundation);
+                    }
+                    break;
+                case Command.UNDO_FOUNDATION_TO_TABLEAU:
+                    {
+                        let undoFoundationToTableau = <UndoFoundationToTableauCommand>gameCommand;
+                        let cardData = this.tableauPiles[undoFoundationToTableau.TableauIndex].removeLastCard();
+                        this.foundationPiles[undoFoundationToTableau.FoundationIndex].addCard(cardData[0]);
+                        undoFoundationToTableau.updateData(cardData[0]);
+                        //
+                        gameCommandDatas.push(undoFoundationToTableau);
+                    }
+                    break;
+                case Command.UNDO_WASTE_TO_TABLEAU:
+                    {
+                        let undoWasteToTabeau = <UndoWasteToTableauCommand>gameCommand;
+                        let cardData = this.tableauPiles[undoWasteToTabeau.TableauIndex].removeLastCard();
+                        this.watsePile.addCard(cardData[0]);
+                        undoWasteToTabeau.updateData(cardData[0]);
+                        //
+                        gameCommandDatas.push(undoWasteToTabeau);
+                    }
+                    break;
+                case Command.UNDO_WASTE_TO_FOUNDATION:
+                    {
+                        let undoWasteToFoundation = <UndoWasteToFoundationCommand>gameCommand;
+                        let cardData = this.foundationPiles[undoWasteToFoundation.FoundationIndex].removeLastCard();
+                        this.watsePile.addCard(cardData[0]);
+                        undoWasteToFoundation.updateData(cardData[0]);
+                        //
+                        gameCommandDatas.push(undoWasteToFoundation);
+                    }
+                    break;
+                case Command.UNDO_TABLEAU_TO_TABLEAU:
+                    {
+                        let undoTableauToTableauCommand = <UndoTableauToTableauCommand>gameCommand;
+                        let cardData = this.tableauPiles[undoTableauToTableauCommand.TableauEndIndex].removeCardsFromIndex(undoTableauToTableauCommand.TableauEndCardAddIndex);
+                        //
+                        let tableauStartPile = this.tableauPiles[undoTableauToTableauCommand.TableauStartIndex];
+                        let lastCardStartPile = tableauStartPile.getLastCard();
+                        let lastCardTableauIndex = tableauStartPile.Cards.length;
+                        if(lastCardStartPile != null)
+                        lastCardStartPile.isOpen = undoTableauToTableauCommand.IsOpenLastCard;  
+                        tableauStartPile.addCards(cardData);
+                        //
+                        undoTableauToTableauCommand.updateData(cardData,lastCardTableauIndex);
+                        //
+                        gameCommandDatas.push(undoTableauToTableauCommand);
+                    }
+                    break;
+        }
+
+        if(this.processCommand != null)
+        this.processCommand(gameCommandDatas);
     }
 
     private isWinGame() : boolean{

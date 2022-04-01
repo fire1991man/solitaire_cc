@@ -40,8 +40,12 @@ export class Pile {
         return this.getCardByIndex(this.cards.length-1);
     }
 
-    public getCardsFromIndex(index : number) : CardData[]{
+    public removeCardsFromIndex(index : number) : CardData[]{
         return this.cards.splice(index,this.cards.length-index);
+    }
+
+    public removeLastCard() : CardData[]{
+        return this.removeCardsFromIndex(this.cards.length-1);
     }
 
 }

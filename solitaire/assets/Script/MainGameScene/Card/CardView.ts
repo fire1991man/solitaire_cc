@@ -138,8 +138,9 @@ export class CardView extends Component {
         .start();
     }
 
-    public move(worldPos: Vec3, callback : Function = null) : void{
+    public move(worldPos: Vec3, callback : Function = null,delay : number = 0) : void{
         tween(this.node)
+        .delay(delay)
         .to(0.2,{worldPosition : worldPos})
         .call(()=>{
             if(callback != null)

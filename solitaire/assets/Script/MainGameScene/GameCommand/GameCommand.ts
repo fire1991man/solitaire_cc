@@ -20,6 +20,13 @@ export enum Command{
     MOVE_WASTE_TO_TABLEAU = 12,
     OPEN_LAST_CARD_TABLEAU = 13,
     GAME_RESULT = 14,
+    UNDO_STOCK_TO_WASTE = 15,
+    UNDO_REFILL_STOCK = 16,
+    UNDO_TABLEAU_TO_FOUNDATION = 17,
+    UNDO_FOUNDATION_TO_TABLEAU = 18,
+    UNDO_WASTE_TO_TABLEAU = 19,
+    UNDO_WASTE_TO_FOUNDATION = 20,
+    UNDO_TABLEAU_TO_TABLEAU = 21,
 }
 
 export class GameCommandData {
@@ -336,5 +343,200 @@ export class GameResultCommand extends GameCommandData{
         super();
         this.command = Command.GAME_RESULT;
         this.isWin = isWin;
+    }
+}
+
+export class UndoStockToWasteCommand extends GameCommandData{
+
+    constructor(){
+        super();
+        this.command = Command.UNDO_STOCK_TO_WASTE;
+    }
+}
+
+export class UndoRefillStockCommand extends GameCommandData{
+
+    private cardDatas : CardData[] = null;
+
+    public get CardDatas(): CardData[] {
+        return this.cardDatas;
+    }
+
+    constructor(){
+        super();
+        this.command = Command.UNDO_REFILL_STOCK;
+    }
+
+    public updateData(cardDatas : CardData[]) : void{
+        this.cardDatas = cardDatas;
+    }
+}
+
+export class UndoTableauToFoundationCommand extends GameCommandData{
+
+    private lastCardTableauIndex : number = 0;
+    private tableauIndex : number = 0;
+    private foundationIndex : number = 0;
+    private isOpenLastCard : boolean = false;
+    private cardData : CardData = null;
+
+    public get LastCardTableauIndex(): number {
+        return this.lastCardTableauIndex;
+    }
+    
+    public get IsOpenLastCard(): boolean {
+        return this.isOpenLastCard;
+    }
+    
+    public get FoundationIndex(): number {
+        return this.foundationIndex;
+    }
+
+    public get CardData(): CardData {
+        return this.cardData;
+    }
+
+    public get TableauIndex(): number {
+        return this.tableauIndex;
+    }
+
+    constructor(isOpenLastCard : boolean, foundationIndex : number, tableauIndex : number ){
+        super();
+        this.command = Command.UNDO_TABLEAU_TO_FOUNDATION;
+        this.isOpenLastCard = isOpenLastCard;
+        this.foundationIndex = foundationIndex;
+        this.tableauIndex = tableauIndex;
+    }
+
+    public updateData(cardData : CardData, lastCardTableauIndex : number) : void{
+        this.cardData = cardData;
+        this.lastCardTableauIndex = lastCardTableauIndex;
+    }
+}
+
+export class UndoFoundationToTableauCommand extends GameCommandData{
+
+    private tableauIndex : number = 0;
+    private foundationIndex : number = 0;
+    private cardData : CardData = null;
+
+    public get FoundationIndex(): number {
+        return this.foundationIndex;
+    }
+
+    public get CardData(): CardData {
+        return this.cardData;
+    }
+
+    public get TableauIndex(): number {
+        return this.tableauIndex;
+    }
+
+    constructor(foundationIndex : number, tableauIndex : number){
+        super();
+        this.command = Command.UNDO_FOUNDATION_TO_TABLEAU;
+        this.foundationIndex = foundationIndex;
+        this.tableauIndex = tableauIndex;
+    }
+
+    public updateData(cardData : CardData) : void{
+        this.cardData = cardData;
+    }
+}
+
+export class UndoWasteToTableauCommand extends GameCommandData{
+
+    private tableauIndex : number = 0;
+    private cardData : CardData;
+
+    public get TableauIndex(): number {
+        return this.tableauIndex;
+    }
+
+    public get CardData(): CardData {
+        return this.cardData;
+    }
+
+    constructor(tableauIndex : number){
+        super();
+        this.command = Command.UNDO_WASTE_TO_TABLEAU;
+        this.tableauIndex = tableauIndex;
+    }
+
+    public updateData(cardData : CardData) : void{
+        this.cardData = cardData;
+    }
+}
+
+export class UndoWasteToFoundationCommand extends GameCommandData{
+
+    private foundationIndex : number = 0;
+    private cardData : CardData;
+
+    public get FoundationIndex(): number {
+        return this.foundationIndex;
+    }
+
+    public get CardData(): CardData {
+        return this.cardData;
+    }
+
+    constructor(foundationIndex : number){
+        super();
+        this.command = Command.UNDO_WASTE_TO_FOUNDATION;
+        this.foundationIndex = foundationIndex;
+    }
+
+    public updateData(cardData : CardData) : void{
+        this.cardData = cardData;
+    }
+}
+
+export class UndoTableauToTableauCommand extends GameCommandData{
+
+    private lastCardTableauStartIndex : number = 0;
+    private tableauStartIndex : number = 0;
+    private tableauEndIndex : number = 0;
+    private tableauEndCardAddIndex : number = 0;
+    private isOpenLastCard : boolean = false;
+    private cardDatas : CardData[] = null;
+
+    public get TableauEndCardAddIndex(): number {
+        return this.tableauEndCardAddIndex;
+    }
+
+    public get LastCardTableauStartIndex(): number {
+        return this.lastCardTableauStartIndex;
+    }
+    
+    public get IsOpenLastCard(): boolean {
+        return this.isOpenLastCard;
+    }
+    
+    public get TableauStartIndex(): number {
+        return this.tableauStartIndex;
+    }
+
+    public get CardDatas(): CardData[] {
+        return this.cardDatas;
+    }
+
+    public get TableauEndIndex(): number {
+        return this.tableauEndIndex;
+    }
+
+    public updateData(cardDatas : CardData[], lastCardTableauStartIndex : number) : void{
+        this.cardDatas = cardDatas;
+        this.lastCardTableauStartIndex = lastCardTableauStartIndex;
+    }
+
+    constructor(isOpenLastCard : boolean, tableauStartIndex : number,
+                             tableauEndIndex : number, tableauEndCardAddIndex : number){
+        super();
+        this.command = Command.UNDO_TABLEAU_TO_TABLEAU;
+        this.isOpenLastCard = isOpenLastCard;
+        this.tableauStartIndex = tableauStartIndex;
+        this.tableauEndIndex = tableauEndIndex;
+        this.tableauEndCardAddIndex = tableauEndCardAddIndex;
     }
 }
