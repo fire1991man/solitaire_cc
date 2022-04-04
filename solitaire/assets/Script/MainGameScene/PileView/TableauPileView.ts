@@ -10,6 +10,7 @@ export class TableauPileView extends PileView {
 
     public updateSize(numberCards: number): void {
         let height = this.CARD_SIZE.y + (numberCards - 1) * this.CARD_SPACE_Y;
+        height = height < this.CARD_SIZE.y ? this.CARD_SIZE.y : height;
         this.getComponent(UITransform).setContentSize( new math.Size(this.CARD_SIZE.x,height));
         super.updateSize(numberCards);
     }

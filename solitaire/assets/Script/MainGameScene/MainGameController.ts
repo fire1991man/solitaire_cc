@@ -1,5 +1,5 @@
 
-import { _decorator, Component, Node, log, Prefab, instantiate, AudioClip, AudioSource } from 'cc';
+import { _decorator, Component, Node, log, Prefab, instantiate, AudioClip, AudioSource, game, Game, Director, view, Vec2, math } from 'cc';
 import { CardData, Suit } from '../Data/CardData';
 import { Utils } from '../Utils/Utils';
 import { CardView } from './Card/CardView';
@@ -27,6 +27,9 @@ export class MainGameController extends Component {
 
     @property(AudioClip)
     private wrongMoveSfx : AudioClip = null;
+
+    @property(AudioClip)
+    private shuffleCardSfx : AudioClip = null;
 
     @property(MenuPopup)
     private menuPopup : MenuPopup = null;
@@ -64,6 +67,22 @@ export class MainGameController extends Component {
         //
         this.menuPopup.newgameClickCallback = this.onNewGameClick.bind(this);
         this.menuPopup.replayClickCallback = this.onReplayClick.bind(this);
+        //
+        game.on(Game.EVENT_HIDE, this.onHideApp); 
+        log("width: " + screen.width + " - height: " + screen.height);
+        let scale = screen.height / screen.width;
+        if(scale >=2){
+            this.node.scale = new math.Vec3(0.8,0.8,1);
+            this.node.position = new math.Vec3(0,75);
+        }
+    }
+
+    onDestroy() {
+        log("onDestroy");
+    }
+
+    onHideApp(){
+        log("onHideApp");
     }
 
     private async delayStart(){
@@ -222,8 +241,9 @@ export class MainGameController extends Component {
 
     private async processShuffle(shuffleCommand : ShuffleCommand){
         log("processShuffle");
+        this.audioSource.playOneShot(this.shuffleCardSfx, 0.8);
         this.collectAllCards();
-        await Utils.sleep(500);
+        await Utils.sleep(1000);
     }
 
     private async processDealCards(dealCardsCommand : DealCardsCommand){
@@ -231,19 +251,20 @@ export class MainGameController extends Component {
         let tableauPile = dealCardsCommand.TableauPiles;
         let index = 0;
         for( let i = 0; i < tableauPile.length;i++){
-            let tempCardViews : CardView[] = [];
             for(let j = 0; j < tableauPile[i].Cards.length;j++){
                 let cardData = tableauPile[i].Cards[j];
                 let tempCardView = this.cardViews[index++];
                 tempCardView.UpdateData(cardData,false);
-                tempCardViews.push(tempCardView);
+                let worldPos = this.tableauPileViews[i].getCardWorldPosByIndex(j);
+                tempCardView.move(worldPos,()=>{
+                    this.tableauPileViews[i].addCard(tempCardView);
+                },index*0.08);
             }
-            this.tableauPileViews[i].addCards(tempCardViews);
         }
 
         let remainCardViews = this.cardViews.slice(index,this.cardViews.length);
         this.stockView.addCards(remainCardViews);
-        await Utils.sleep(500);
+        await Utils.sleep(3000);
     }
 
     private async processOpenLastCardAllTableau( openLastCardAllTableauCommand : OpenLastCardAllTableauCommand){
@@ -482,6 +503,7 @@ export class MainGameController extends Component {
         let cardData = undoFoundationToTableauCommand.CardData;
         //
         let cardView = this.tableauPileViews[tableauIndex].removeLastCard();
+        this.tableauPileViews[tableauIndex].resize();
         cardView.UpdateData(cardData,cardData.isOpen);
         this.changeCardToTopLayer(cardView);
         let destinationWorldPos = this.foundationViews[foundationIndex].getCardWorldPosByIndex(0);
@@ -617,6 +639,7 @@ export class MainGameController extends Component {
 
     public onUndoClick() : void{
         this.solitaireLogic.undo();
+        this.audioSource.playOneShot(this.touchCardSfx, 0.8);
     }
 
     public onNewGameClick() : void{

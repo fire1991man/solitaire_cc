@@ -50,7 +50,7 @@ export abstract class PileView extends Component {
         let newPos = this.getCardPosByIndex(this.cards.length);
         this.updateSize(this.cards.length + 1); 
         card.node.setParent(this.node);
-        card.node.setSiblingIndex(this.cards.length);
+        card.node.setSiblingIndex(this.cards.length+1);
         card.node.setPosition(newPos);
         this.cards.push(card);
         this.reArrangeCardPosition();
